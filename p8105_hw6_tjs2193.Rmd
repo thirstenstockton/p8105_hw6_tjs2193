@@ -169,8 +169,18 @@ city_state_log
 
 ```
 
+### Plot of OR's and their 95% CI by city.
 
+```{r}
 
+OR_plot =
+city_state_log %>%
+  ggplot(., aes (y = reorder(city_state, -OR), x= OR)) +
+      geom_point(shape = 19, size=1) +
+      geom_errorbarh(aes(xmin = LCI, xmax = UCI, height = 0.25)) +
+      geom_vline(xintercept = 1, color = "purple", alpha = 0.5) 
 
+OR_plot
+```
 
-
+This plot shows the odds ratios comparing odds of a male victim having their homicide go unsolved versus a female victim, by city. Looking at this plot, we can see that most of the odds ratio were not significant. Male victims tended to have higher odds of having their homicide go unsolved across cities. New York City boasted the largest odds ratio, but also had a fairly large confidence interval. 
