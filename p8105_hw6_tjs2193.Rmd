@@ -106,21 +106,42 @@ Similar to the r-squared plot, this plot shows a slight left skew. The 95% confi
 
 ### Problem 2
 
-## Reading in raw data
+### Reading in and cleaning data
 ```{r}
 homocide_df = 
   read_csv("https://raw.githubusercontent.com/washingtonpost/data-homicides/master/homicide-data.csv") %>%
   unite(city_state,c(city, state), sep = ", ", remove=FALSE) %>%
   filter(city_state != "Dallas, Tx", city_state != "Phoenix, AZ", city_state != "Kansas City, MO", city_state != "Tulsa, AL")  %>%
   filter(victim_race %in% c("White", "Black")) %>%
-  mutate(victim_age = as.numeric(victim_age))
+  mutate(victim_age = as.numeric(victim_age)) %>%
+  mutate(crime = case_when(
+    disposition %in% c("Closed without arrest", "Open/No arrest") ~ "1",
+    disposition %in% c("Closed by arrest") ~ "0")) %>%
+  mutate(crime = as.numeric(crime)) 
 
-
-homocide_df
-
-skimr::skim(homocide_df)
 ```
 
+
+### Logistic regression model for Baltimore, MD.
+
+```{r}
+
+bmd_log= 
+  homocide_df %>%
+  filter(city_state == "Baltimore, MD") %>%
+  glm(crime ~ victim_age + victim_race + victim_sex, family = binomial(), data = .)
+
+
+bmd_log %>% 
+  broom::tidy() %>%
+  mutate(OR = exp(estimate)) %>%
+  mutate(LCI = exp(estimate-(1.96*std.error))) %>%
+  mutate(UCI = exp(estimate+(1.96*std.error))) %>%
+  select(term, log_OR = estimate, OR, LCI, UCI) %>%
+  filter(term == "victim_sexMale")
+  
+
+```
 
 
 

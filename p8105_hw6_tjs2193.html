@@ -461,14 +461,18 @@ skewness.</p>
 <div id="problem-2" class="section level3">
 <h3>Problem 2</h3>
 </div>
-<div id="reading-in-raw-data" class="section level2">
-<h2>Reading in raw data</h2>
+<div id="reading-in-and-cleaning-data" class="section level3">
+<h3>Reading in and cleaning data</h3>
 <pre class="r"><code>homocide_df = 
   read_csv(&quot;https://raw.githubusercontent.com/washingtonpost/data-homicides/master/homicide-data.csv&quot;) %&gt;%
   unite(city_state,c(city, state), sep = &quot;, &quot;, remove=FALSE) %&gt;%
   filter(city_state != &quot;Dallas, Tx&quot;, city_state != &quot;Phoenix, AZ&quot;, city_state != &quot;Kansas City, MO&quot;, city_state != &quot;Tulsa, AL&quot;)  %&gt;%
   filter(victim_race %in% c(&quot;White&quot;, &quot;Black&quot;)) %&gt;%
-  mutate(victim_age = as.numeric(victim_age))</code></pre>
+  mutate(victim_age = as.numeric(victim_age)) %&gt;%
+  mutate(crime = case_when(
+    disposition %in% c(&quot;Closed without arrest&quot;, &quot;Open/No arrest&quot;) ~ &quot;1&quot;,
+    disposition %in% c(&quot;Closed by arrest&quot;) ~ &quot;0&quot;)) %&gt;%
+  mutate(crime = as.numeric(crime)) </code></pre>
 <pre><code>## Rows: 52179 Columns: 12
 ## ── Column specification ────────────────────────────────────────────────────────
 ## Delimiter: &quot;,&quot;
@@ -478,269 +482,26 @@ skewness.</p>
 ## ℹ Use `spec()` to retrieve the full column specification for this data.
 ## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
 <pre><code>## Warning in mask$eval_all_mutate(quo): NAs introduced by coercion</code></pre>
-<pre class="r"><code>homocide_df</code></pre>
-<pre><code>## # A tibble: 39,693 × 13
-##    uid       repor…¹ victi…² victi…³ victi…⁴ victi…⁵ victi…⁶ city_…⁷ city  state
-##    &lt;chr&gt;       &lt;dbl&gt; &lt;chr&gt;   &lt;chr&gt;   &lt;chr&gt;     &lt;dbl&gt; &lt;chr&gt;   &lt;chr&gt;   &lt;chr&gt; &lt;chr&gt;
-##  1 Alb-0000…  2.01e7 SATTER… VIVIANA White        15 Female  Albuqu… Albu… NM   
-##  2 Alb-0000…  2.01e7 MULA    VIVIAN  White        72 Female  Albuqu… Albu… NM   
-##  3 Alb-0000…  2.01e7 BOOK    GERALD… White        91 Female  Albuqu… Albu… NM   
-##  4 Alb-0000…  2.01e7 MARTIN… GUSTAVO White        56 Male    Albuqu… Albu… NM   
-##  5 Alb-0000…  2.01e7 LUJAN   KEVIN   White        NA Male    Albuqu… Albu… NM   
-##  6 Alb-0000…  2.01e7 GRAY    STEFAN… White        43 Female  Albuqu… Albu… NM   
-##  7 Alb-0000…  2.01e7 DAVID   LARRY   White        52 Male    Albuqu… Albu… NM   
-##  8 Alb-0000…  2.01e7 BRITO   ELIZAB… White        22 Female  Albuqu… Albu… NM   
-##  9 Alb-0000…  2.01e7 KING    TEVION  Black        15 Male    Albuqu… Albu… NM   
-## 10 Alb-0000…  2.01e7 BOYKIN  CEDRIC  Black        25 Male    Albuqu… Albu… NM   
-## # … with 39,683 more rows, 3 more variables: lat &lt;dbl&gt;, lon &lt;dbl&gt;,
-## #   disposition &lt;chr&gt;, and abbreviated variable names ¹​reported_date,
-## #   ²​victim_last, ³​victim_first, ⁴​victim_race, ⁵​victim_age, ⁶​victim_sex,
-## #   ⁷​city_state
-## # ℹ Use `print(n = ...)` to see more rows, and `colnames()` to see all variable names</code></pre>
-<pre class="r"><code>skimr::skim(homocide_df)</code></pre>
-<table>
-<caption>Data summary</caption>
-<tbody>
-<tr class="odd">
-<td align="left">Name</td>
-<td align="left">homocide_df</td>
-</tr>
-<tr class="even">
-<td align="left">Number of rows</td>
-<td align="left">39693</td>
-</tr>
-<tr class="odd">
-<td align="left">Number of columns</td>
-<td align="left">13</td>
-</tr>
-<tr class="even">
-<td align="left">_______________________</td>
-<td align="left"></td>
-</tr>
-<tr class="odd">
-<td align="left">Column type frequency:</td>
-<td align="left"></td>
-</tr>
-<tr class="even">
-<td align="left">character</td>
-<td align="left">9</td>
-</tr>
-<tr class="odd">
-<td align="left">numeric</td>
-<td align="left">4</td>
-</tr>
-<tr class="even">
-<td align="left">________________________</td>
-<td align="left"></td>
-</tr>
-<tr class="odd">
-<td align="left">Group variables</td>
-<td align="left">None</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Variable type: character</strong></p>
-<table>
-<colgroup>
-<col width="19%" />
-<col width="13%" />
-<col width="19%" />
-<col width="5%" />
-<col width="5%" />
-<col width="8%" />
-<col width="12%" />
-<col width="15%" />
-</colgroup>
-<thead>
-<tr class="header">
-<th align="left">skim_variable</th>
-<th align="right">n_missing</th>
-<th align="right">complete_rate</th>
-<th align="right">min</th>
-<th align="right">max</th>
-<th align="right">empty</th>
-<th align="right">n_unique</th>
-<th align="right">whitespace</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td align="left">uid</td>
-<td align="right">0</td>
-<td align="right">1</td>
-<td align="right">9</td>
-<td align="right">10</td>
-<td align="right">0</td>
-<td align="right">39693</td>
-<td align="right">0</td>
-</tr>
-<tr class="even">
-<td align="left">victim_last</td>
-<td align="right">0</td>
-<td align="right">1</td>
-<td align="right">2</td>
-<td align="right">20</td>
-<td align="right">0</td>
-<td align="right">9751</td>
-<td align="right">0</td>
-</tr>
-<tr class="odd">
-<td align="left">victim_first</td>
-<td align="right">0</td>
-<td align="right">1</td>
-<td align="right">1</td>
-<td align="right">28</td>
-<td align="right">0</td>
-<td align="right">13769</td>
-<td align="right">0</td>
-</tr>
-<tr class="even">
-<td align="left">victim_race</td>
-<td align="right">0</td>
-<td align="right">1</td>
-<td align="right">5</td>
-<td align="right">5</td>
-<td align="right">0</td>
-<td align="right">2</td>
-<td align="right">0</td>
-</tr>
-<tr class="odd">
-<td align="left">victim_sex</td>
-<td align="right">0</td>
-<td align="right">1</td>
-<td align="right">4</td>
-<td align="right">7</td>
-<td align="right">0</td>
-<td align="right">3</td>
-<td align="right">0</td>
-</tr>
-<tr class="even">
-<td align="left">city_state</td>
-<td align="right">0</td>
-<td align="right">1</td>
-<td align="right">9</td>
-<td align="right">18</td>
-<td align="right">0</td>
-<td align="right">47</td>
-<td align="right">0</td>
-</tr>
-<tr class="odd">
-<td align="left">city</td>
-<td align="right">0</td>
-<td align="right">1</td>
-<td align="right">5</td>
-<td align="right">14</td>
-<td align="right">0</td>
-<td align="right">47</td>
-<td align="right">0</td>
-</tr>
-<tr class="even">
-<td align="left">state</td>
-<td align="right">0</td>
-<td align="right">1</td>
-<td align="right">2</td>
-<td align="right">2</td>
-<td align="right">0</td>
-<td align="right">27</td>
-<td align="right">0</td>
-</tr>
-<tr class="odd">
-<td align="left">disposition</td>
-<td align="right">0</td>
-<td align="right">1</td>
-<td align="right">14</td>
-<td align="right">21</td>
-<td align="right">0</td>
-<td align="right">3</td>
-<td align="right">0</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Variable type: numeric</strong></p>
-<table style="width:100%;">
-<colgroup>
-<col width="11%" />
-<col width="7%" />
-<col width="11%" />
-<col width="9%" />
-<col width="7%" />
-<col width="9%" />
-<col width="9%" />
-<col width="9%" />
-<col width="9%" />
-<col width="10%" />
-<col width="4%" />
-</colgroup>
-<thead>
-<tr class="header">
-<th align="left">skim_variable</th>
-<th align="right">n_missing</th>
-<th align="right">complete_rate</th>
-<th align="right">mean</th>
-<th align="right">sd</th>
-<th align="right">p0</th>
-<th align="right">p25</th>
-<th align="right">p50</th>
-<th align="right">p75</th>
-<th align="right">p100</th>
-<th align="left">hist</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td align="left">reported_date</td>
-<td align="right">0</td>
-<td align="right">1.00</td>
-<td align="right">20128858.29</td>
-<td align="right">910983.77</td>
-<td align="right">20070101.00</td>
-<td align="right">20100404.00</td>
-<td align="right">20130108.00</td>
-<td align="right">20150917.00</td>
-<td align="right">201511105.00</td>
-<td align="left">▇▁▁▁▁</td>
-</tr>
-<tr class="even">
-<td align="left">victim_age</td>
-<td align="right">290</td>
-<td align="right">0.99</td>
-<td align="right">31.93</td>
-<td align="right">14.46</td>
-<td align="right">0.00</td>
-<td align="right">22.00</td>
-<td align="right">28.00</td>
-<td align="right">40.00</td>
-<td align="right">102.00</td>
-<td align="left">▂▇▃▁▁</td>
-</tr>
-<tr class="odd">
-<td align="left">lat</td>
-<td align="right">42</td>
-<td align="right">1.00</td>
-<td align="right">37.53</td>
-<td align="right">4.28</td>
-<td align="right">25.73</td>
-<td align="right">35.04</td>
-<td align="right">38.89</td>
-<td align="right">40.65</td>
-<td align="right">45.05</td>
-<td align="left">▁▃▅▇▅</td>
-</tr>
-<tr class="even">
-<td align="left">lon</td>
-<td align="right">42</td>
-<td align="right">1.00</td>
-<td align="right">-88.83</td>
-<td align="right">12.53</td>
-<td align="right">-122.51</td>
-<td align="right">-90.26</td>
-<td align="right">-86.84</td>
-<td align="right">-80.80</td>
-<td align="right">-71.01</td>
-<td align="left">▂▁▂▇▅</td>
-</tr>
-</tbody>
-</table>
+</div>
+<div id="logistic-regression-model-for-baltimore-md." class="section level3">
+<h3>Logistic regression model for Baltimore, MD.</h3>
+<pre class="r"><code>bmd_log= 
+  homocide_df %&gt;%
+  filter(city_state == &quot;Baltimore, MD&quot;) %&gt;%
+  glm(crime ~ victim_age + victim_race + victim_sex, family = binomial(), data = .)
+
+
+bmd_log %&gt;% 
+  broom::tidy() %&gt;%
+  mutate(OR = exp(estimate)) %&gt;%
+  mutate(LCI = exp(estimate-(1.96*std.error))) %&gt;%
+  mutate(UCI = exp(estimate+(1.96*std.error))) %&gt;%
+  select(term, log_OR = estimate, OR, LCI, UCI) %&gt;%
+  filter(term == &quot;victim_sexMale&quot;)</code></pre>
+<pre><code>## # A tibble: 1 × 5
+##   term           log_OR    OR   LCI   UCI
+##   &lt;chr&gt;           &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1 victim_sexMale  0.854  2.35  1.79  3.08</code></pre>
 </div>
 </div>
 
