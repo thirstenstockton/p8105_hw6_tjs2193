@@ -10,7 +10,7 @@ output: github_document
 library(tidyverse)
 library(modelr)
 library(purrr)
-
+library(glmnet)
 ```
 
 # Problem 1
@@ -187,6 +187,8 @@ This plot shows the odds ratios comparing odds of a male victim having their hom
 
 ### Problem 3
 
+### **Birthweight regression model using LASSO and OLS**
+
 ### Bringing in and cleaning birthweight dataset
 
 ```{r}
@@ -203,8 +205,32 @@ bwt_df =
     malform = as.logical(malform),
     mrace = as.factor(mrace),
     mrace = fct_recode(mrace, "white" = "1", "black" = "2", "asian" = "3", 
-                       "puerto rican" = "4"))
+                       "puerto rican" = "4")) %>%
+    sample_n(200)
 
 bwt_df
 
 ```
+
+### Finding optimal lambda
+```{r}
+y = bwt_df$bwt
+x = model.matrix(bwt ~ ., bwt_df)[,-1]
+
+val_model =
+  cv.glmnet(x, y)
+
+opt_lambda = 
+  val_model$lambda.min
+
+opt_lambda
+
+```
+
+### Fitting lasso regression model
+
+```{r}
+
+lasso_bwt =
+  glmnet(x, y)
+
