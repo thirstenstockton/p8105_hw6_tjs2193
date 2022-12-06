@@ -101,5 +101,29 @@ weather_df %>%
 quantile(log_betas_bootstrap$log_b0b1, c(0.025, 0.975))
 ```
 
-Similar to the r-squared plot, this plot shows a slight left skew. The 95% confidence inteval for this estimate is (1.962837, 2.059418), but like the first estimate, the 95% CI may not be reliable due to skewness.
+Similar to the r-squared plot, this plot shows a slight left skew. The 95% confidence interval for this estimate is (1.962837, 2.059418), but like the first estimate, the 95% CI may not be reliable due to skewness.
+
+
+### Problem 2
+
+## Reading in raw data
+```{r}
+homocide_df = 
+  read_csv("https://raw.githubusercontent.com/washingtonpost/data-homicides/master/homicide-data.csv") %>%
+  unite(city_state,c(city, state), sep = ", ", remove=FALSE) %>%
+  filter(city_state != "Dallas, Tx", city_state != "Phoenix, AZ", city_state != "Kansas City, MO", city_state != "Tulsa, AL")  %>%
+  filter(victim_race %in% c("White", "Black")) %>%
+  mutate(victim_age = as.numeric(victim_age))
+
+
+homocide_df
+
+skimr::skim(homocide_df)
+```
+
+
+
+
+
+
 
