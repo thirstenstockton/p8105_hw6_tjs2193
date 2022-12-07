@@ -225,7 +225,7 @@ bwt_df
 Splitting data into training and test sets.
 ```{r}
 bwt_df_train =
-  sample_n(bwt_df, 200)
+  sample_n(bwt_df, 869)
 
 
 
@@ -269,7 +269,7 @@ opt_lambda
 
 ```{r}
 
-lasso_bwt_train =
+lasso_bwt =
   glmnet(x1, y, lambda = opt_lambda)
 
 ```
@@ -278,7 +278,7 @@ lasso_bwt_train =
 
 ```{r}
 
-lasso_bwt_train %>%
+lasso_bwt %>%
   broom::tidy()
 
 ```
@@ -287,7 +287,7 @@ lasso_bwt_train %>%
 
 ```{r}
 predicted =
-  predict(lasso_bwt_train, s = opt_lambda, newx = x1_test) 
+  predict(lasso_bwt, s = opt_lambda, newx = x1_test) 
 
 residual =
   predicted - y_test %>%
@@ -304,8 +304,12 @@ plot_df =
   cbind(fittedvalues, predicted, residual) %>%
   as.tibble()
 
+rsme = 
+  sqrt(mean(plot_df$value))
 
-plot_df
+rsme
+  
+  
 
 plot =
   plot_df %>%
@@ -316,3 +320,40 @@ plot
 ```
 
 To build this model predicting birth weight, I split data into training and test sets then fit a LASSO regression model to the training data. After that, I used the model to predict values for individual in the test set and plotted their residuals. The residuals show a fairly symmetrical pattern, clustered around zero, indicating that this is a useful model. There are a few outliers noted, such as the the one around ~3500 g bwt.
+
+### Cross-validation against other models.
+
+Building model with gestational age and length as predictors
+```{r}
+ 
+model_ga_bl =
+  bwt_df_train %>%
+    lm( bwt ~ gaweeks + blength, data =.)
+
+model_ga_bl %>%
+  broom::tidy()
+
+```
+
+Building model with head circumference, length, sex and their interactions.
+```{r}
+ 
+model_int =
+  bwt_df_train %>%
+    lm( bwt ~ babysex + bhead + blength + babysex*bhead + babysex*blength + bhead*blength + bhead*blength*babysex, data =.)
+
+model_int %>%
+  broom::tidy()
+
+```
+
+Performing cross-validation of models
+
+```{r}
+
+
+cv_df = 
+  crossv_mc(bwt_df, 100) 
+
+cv_df
+  
