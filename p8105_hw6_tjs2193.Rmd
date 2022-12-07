@@ -11,6 +11,7 @@ library(tidyverse)
 library(modelr)
 library(purrr)
 library(glmnet)
+library(mgcv)
 set.seed(123)
 options(tibble.print_min = 10)
 ```
@@ -283,7 +284,7 @@ lasso_bwt %>%
 
 ```
 
-### Plot of predictions versus residuals
+### Plot of predictions versus residuals and calculating rmse.
 
 ```{r}
 predicted =
@@ -304,12 +305,10 @@ plot_df =
   cbind(fittedvalues, predicted, residual) %>%
   as.tibble()
 
-rsme = 
-  sqrt(mean(plot_df$value))
+rmse_lasso = 
+  sqrt(mean((plot_df$value)^2))
 
-rsme
-  
-  
+rmse_lasso
 
 plot =
   plot_df %>%
@@ -323,7 +322,7 @@ To build this model predicting birth weight, I split data into training and test
 
 ### Cross-validation against other models.
 
-Building model with gestational age and length as predictors
+Building model with gestational age and length as predictors.
 ```{r}
  
 model_ga_bl =
@@ -347,13 +346,39 @@ model_int %>%
 
 ```
 
-Performing cross-validation of models
+```{r}
+
+rmse(model_int, bwt_df_test)
+
+```
+
+### Comparing models using CV methods
+
+
+RMSE for model with head circumference, length, sex and their interactions.
+```{r}
+
+rmse(model_int, bwt_df_test)
+
+```
+
+RMSE for model with gestational age and length as predictors.
 
 ```{r}
 
+rmse(model_ga_bl, bwt_df_test)
 
-cv_df = 
-  crossv_mc(bwt_df, 100) 
+```
 
-cv_df
+RMSE for LASSO model
+
+```{r}
+
+rmse_lasso
+
+```
+
+According to rmse of our various models, the LASSO regression model fit our data the best. 
+
+
   
