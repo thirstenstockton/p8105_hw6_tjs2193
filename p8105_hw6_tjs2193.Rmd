@@ -187,9 +187,9 @@ This plot shows the odds ratios comparing odds of a male victim having their hom
 
 ### Problem 3
 
-### **Birthweight regression model using LASSO and OLS**
+### **Birthweight regression model using LASSO**
 
-### Bringing in and cleaning birthweight dataset
+### Bringing in and cleaning birthweight dataset for LASSO Regression, selecting 200 observations randomly for 
 
 ```{r}
 
@@ -205,20 +205,43 @@ bwt_df =
     malform = as.logical(malform),
     mrace = as.factor(mrace),
     mrace = fct_recode(mrace, "white" = "1", "black" = "2", "asian" = "3", 
-                       "puerto rican" = "4")) %>%
-    sample_n(200)
+                       "puerto rican" = "4")) 
+bwt_df =
+  tibble::rowid_to_column(bwt_df, "id")
 
 bwt_df
+
+bwt_df_train =
+  sample_n(bwt_df, 200)
+
+
+
+bwt_df_test = 
+  anti_join(bwt_df, bwt_df_train, by = "id")
+
+bwt_df_test =
+ bwt_df_test  %>%
+  select(-id)
+
+
+bwt_df_train =
+  bwt_df_train %>%
+    select(-id)
+
+bwt_df_train
+
+bwt_df_test
 
 ```
 
 ### Finding optimal lambda
 ```{r}
-y = bwt_df$bwt
-x = model.matrix(bwt ~ ., bwt_df)[,-1]
+y = bwt_df_train$bwt
+x1 = model.matrix(bwt ~ ., bwt_df_train)[,-1]
+
 
 val_model =
-  cv.glmnet(x, y)
+  cv.glmnet(x1, y)
 
 opt_lambda = 
   val_model$lambda.min
@@ -231,6 +254,34 @@ opt_lambda
 
 ```{r}
 
-lasso_bwt =
-  glmnet(x, y)
+lasso_bwt_train =
+  glmnet(x1, y, lambda = opt_lambda)
 
+```
+
+### Results of our model
+
+```{r}
+
+lasso_bwt_train %>%
+  broom::tidy()
+
+```
+
+### Plot of predictions versus residuals
+
+```{r}
+
+
+predicted =
+  predict(lasso_bwt_train, s = opt_lambda, newx = x1)
+
+predicted
+
+residual =
+  predicted - y
+
+residual
+
+
+```
