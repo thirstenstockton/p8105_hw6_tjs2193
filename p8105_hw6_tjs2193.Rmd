@@ -11,6 +11,8 @@ library(tidyverse)
 library(modelr)
 library(purrr)
 library(glmnet)
+set.seed(123)
+options(tibble.print_min = 10)
 ```
 
 # Problem 1
@@ -189,7 +191,9 @@ This plot shows the odds ratios comparing odds of a male victim having their hom
 
 ### **Birthweight regression model using LASSO**
 
-### Bringing in and cleaning birthweight dataset for LASSO Regression, selecting 200 observations randomly for 
+### Bringing in and cleaning birthweight dataset for LASSO Regression.
+
+General cleaning
 
 ```{r}
 
@@ -206,11 +210,20 @@ bwt_df =
     mrace = as.factor(mrace),
     mrace = fct_recode(mrace, "white" = "1", "black" = "2", "asian" = "3", 
                        "puerto rican" = "4")) 
+
+```
+
+Adding column ID in order to split data into training and test sets.
+```{r}
 bwt_df =
   tibble::rowid_to_column(bwt_df, "id")
 
 bwt_df
 
+```
+
+Splitting data into training and test sets.
+```{r}
 bwt_df_train =
   sample_n(bwt_df, 200)
 
@@ -234,11 +247,13 @@ bwt_df_test
 
 ```
 
-### Finding optimal lambda
+### Finding optimal lambda and creating test objects for model building and validation
 ```{r}
 y = bwt_df_train$bwt
 x1 = model.matrix(bwt ~ ., bwt_df_train)[,-1]
 
+y_test = bwt_df_test$bwt
+x1_test = model.matrix(bwt ~ ., bwt_df_test)[,-1]
 
 val_model =
   cv.glmnet(x1, y)
@@ -271,17 +286,33 @@ lasso_bwt_train %>%
 ### Plot of predictions versus residuals
 
 ```{r}
-
-
 predicted =
-  predict(lasso_bwt_train, s = opt_lambda, newx = x1)
-
-predicted
+  predict(lasso_bwt_train, s = opt_lambda, newx = x1_test) 
 
 residual =
-  predicted - y
+  predicted - y_test %>%
+  as.tibble()
 
-residual
+fittedvalues =
+  bwt_df_test$bwt
 
+predicted =
+  predicted %>%
+  as.tibble
+
+plot_df =
+  cbind(fittedvalues, predicted, residual) %>%
+  as.tibble()
+
+
+plot_df
+
+plot =
+  plot_df %>%
+  ggplot(aes(x = fittedvalues, y = value)) + geom_point(size = 0.25, alpha = 0.8)
+
+plot
 
 ```
+
+To build this model predicting birth weight, I split data into training and test sets then fit a LASSO regression model to the training data. After that, I used the model to predict values for individual in the test set and plotted their residuals. The residuals show a fairly symmetrical pattern, clustered around zero, indicating that this is a useful model. There are a few outliers noted, such as the the one around ~3500 g bwt.
