@@ -1,0 +1,68 @@
+---
+title: "Birthweight PCA Example"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+
+library(tidyverse)
+library(rpart)
+library(rpart.plot)
+set.seed(123)
+options(tibble.print_min = 10)
+library(rpart)
+library(rpart.plot)
+```
+
+### Prinicipal component analysis example
+
+```{r}
+
+bwt_df_pca =
+ read_csv("./birthweight.csv") %>%
+  select(-frace, -mrace, -babysex, -malform, -pnumlbw, -pnumsga, -parity)
+
+skimr::skim(bwt_df_pca)
+
+bwt_pca =
+  prcomp(bwt_df_pca, scale =TRUE, center = TRUE, rext = T)
+
+names(bwt_pca) 
+
+summary(bwt_pca)
+
+biplot(bwt_pca, main = "Prinicipal Components", scale = 0)
+
+pca_var  =
+  bwt_pca$sdev ^ 2
+
+pca_var
+
+scree =
+  pca_var/ sum(pca_var)
+
+scree
+
+plot(scree, xlab = "principal component",
+            ylab = "Proportion of Variance Explained",
+            ylim = c(0, 1), type = "b",
+            main = "Scree Plot")
+
+plot(cumsum(scree),
+    xlab = "Principal Component",
+    ylab = "Cumulative Proportion of Variance Explained",
+    ylim = c(0, 1), type = "b")
+
+which(cumsum(scree) >= 0.9)[1]
+
+train.data =
+  data.frame(bwt = bwt_df_pca$bwt, bwt_pca$x[, 1:4])
+
+rpart.model = 
+  rpart(bwt ~ .,
+                    data = train.data, method = "anova")
+ 
+rpart.plot(rpart.model)
+```
+
+**not the best for our data based on scree plot. had to drop important varaibles such as race and sex.** 
