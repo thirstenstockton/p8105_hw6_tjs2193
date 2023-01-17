@@ -12,52 +12,38 @@ set.seed(123)
 options(tibble.print_min = 10)
 library(rpart)
 library(rpart.plot)
+library(randomForest)
 ```
 
 ### Prinicipal component analysis example
 
 ```{r}
-
 bwt_df_pca =
  read_csv("./birthweight.csv") %>%
   select(-frace, -mrace, -babysex, -malform, -pnumlbw, -pnumsga, -parity)
-
 skimr::skim(bwt_df_pca)
-
 bwt_pca =
   prcomp(bwt_df_pca, scale =TRUE, center = TRUE, rext = T)
-
 names(bwt_pca) 
-
 summary(bwt_pca)
-
 biplot(bwt_pca, main = "Prinicipal Components", scale = 0)
-
 pca_var  =
   bwt_pca$sdev ^ 2
-
 pca_var
-
 scree =
   pca_var/ sum(pca_var)
-
 scree
-
 plot(scree, xlab = "principal component",
             ylab = "Proportion of Variance Explained",
             ylim = c(0, 1), type = "b",
             main = "Scree Plot")
-
 plot(cumsum(scree),
     xlab = "Principal Component",
     ylab = "Cumulative Proportion of Variance Explained",
     ylim = c(0, 1), type = "b")
-
 which(cumsum(scree) >= 0.9)[1]
-
 train.data =
   data.frame(bwt = bwt_df_pca$bwt, bwt_pca$x[, 1:4])
-
 rpart.model = 
   rpart(bwt ~ .,
                     data = train.data, method = "anova")
@@ -66,3 +52,131 @@ rpart.plot(rpart.model)
 ```
 
 **not the best for our data based on scree plot. had to drop important varaibles such as race and sex.** 
+
+General cleaning
+
+```{r}
+
+bwt_df = 
+  read_csv("./birthweight.csv") %>% 
+  janitor::clean_names() %>%
+  mutate(
+    babysex = as.factor(babysex),
+    babysex = fct_recode(babysex, "male" = "1", "female" = "2"),
+    frace = as.factor(frace),
+    frace = fct_recode(frace, "white" = "1", "black" = "2", "asian" = "3", 
+                       "puerto rican" = "4", "other" = "8"),
+    malform = as.logical(malform),
+    mrace = as.factor(mrace),
+    mrace = fct_recode(mrace, "white" = "1", "black" = "2", "asian" = "3", 
+                       "puerto rican" = "4")) 
+
+```
+
+Adding column ID in order to split data into training and test sets.
+```{r}
+bwt_df =
+  tibble::rowid_to_column(bwt_df, "id")
+
+bwt_df
+
+```
+
+Splitting data into training and test sets.
+```{r}
+bwt_df_train =
+  sample_n(bwt_df, 869)
+
+
+
+bwt_df_test = 
+  anti_join(bwt_df, bwt_df_train, by = "id")
+
+bwt_df_test =
+ bwt_df_test  %>%
+  select(-id)
+
+
+bwt_df_train =
+  bwt_df_train %>%
+    select(-id)
+
+bwt_df_train
+
+bwt_df_test
+
+
+y = bwt_df_train$bwt %>% as.tibble()
+
+x1 = model.matrix(bwt ~ ., bwt_df_train)[,-1] %>% as.tibble()
+
+y_test = bwt_df_test$bwt
+x1_test = model.matrix(bwt ~ ., bwt_df_test)[,-1]
+
+rpart.model_pure = 
+  rpart(bwt  ~ .,
+                    data = bwt_df_train, method = "anova")
+ 
+rpart.plot(rpart.model_pure)
+
+predicted_dec =
+ predict(rpart.model_pure, bwt_df_test, type = 'vector') %>%
+  as.tibble
+
+residual_dec =
+  predicted_dec - y_test %>%
+  as.tibble() 
+
+pred_dec =
+  predicted_dec%>%
+   rename(prediction = value)
+
+res_dec =
+  residual_dec%>%
+   rename(residual = value)
+
+fittedvalues_dec =
+  bwt_df_test$bwt %>%
+  as.tibble
+
+
+plot_df_dec =
+  cbind(fittedvalues_dec, pred_dec, res_dec) %>%
+  as.tibble()
+
+plot_df_dec
+
+rmse_dec = 
+  sqrt(mean((plot_df_dec$residual)^2))
+
+rmse_dec
+
+
+```
+
+### Random forest models
+
+```{r}
+
+rf.fit <- randomForest(bwt ~ ., data=bwt_df_train, ntree=1000,
+                       keep.forest=FALSE, importance=TRUE)
+
+```
+
+```{r}
+ImpData <- as.data.frame(importance(rf.fit))
+ImpData$Var.Names <- row.names(ImpData)
+
+ggplot(ImpData, aes(x=Var.Names, y=`%IncMSE`)) +
+  geom_segment( aes(x=Var.Names, xend=Var.Names, y=0, yend=`%IncMSE`), color="skyblue") +
+  geom_point(aes(size = IncNodePurity), color="blue", alpha=0.6) +
+  theme_light() +
+  coord_flip() +
+  theme(
+    legend.position="bottom",
+    panel.grid.major.y = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+
+```

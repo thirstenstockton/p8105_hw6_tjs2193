@@ -89,7 +89,6 @@ biplot(bwt_pca, main = "Prinicipal Components", scale = 0)
 ``` r
 pca_var  =
   bwt_pca$sdev ^ 2
-
 pca_var
 ```
 
@@ -100,7 +99,6 @@ pca_var
 ``` r
 scree =
   pca_var/ sum(pca_var)
-
 scree
 ```
 
@@ -135,7 +133,6 @@ which(cumsum(scree) >= 0.9)[1]
 ``` r
 train.data =
   data.frame(bwt = bwt_df_pca$bwt, bwt_pca$x[, 1:4])
-
 rpart.model = 
   rpart(bwt ~ .,
                     data = train.data, method = "anova")
@@ -147,3 +144,225 @@ rpart.plot(rpart.model)
 
 **not the best for our data based on scree plot. had to drop important
 varaibles such as race and sex.**
+
+General cleaning
+
+``` r
+bwt_df = 
+  read_csv("./birthweight.csv") %>% 
+  janitor::clean_names() %>%
+  mutate(
+    babysex = as.factor(babysex),
+    babysex = fct_recode(babysex, "male" = "1", "female" = "2"),
+    frace = as.factor(frace),
+    frace = fct_recode(frace, "white" = "1", "black" = "2", "asian" = "3", 
+                       "puerto rican" = "4", "other" = "8"),
+    malform = as.logical(malform),
+    mrace = as.factor(mrace),
+    mrace = fct_recode(mrace, "white" = "1", "black" = "2", "asian" = "3", 
+                       "puerto rican" = "4")) 
+```
+
+    ## Rows: 4342 Columns: 20
+    ## ── Column specification ────────────────────────────────────────────────────────
+    ## Delimiter: ","
+    ## dbl (20): babysex, bhead, blength, bwt, delwt, fincome, frace, gaweeks, malf...
+    ## 
+    ## ℹ Use `spec()` to retrieve the full column specification for this data.
+    ## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
+
+Adding column ID in order to split data into training and test sets.
+
+``` r
+bwt_df =
+  tibble::rowid_to_column(bwt_df, "id")
+
+bwt_df
+```
+
+    ## # A tibble: 4,342 × 21
+    ##       id babysex bhead blength   bwt delwt fincome frace gaweeks malform menar…¹
+    ##    <int> <fct>   <dbl>   <dbl> <dbl> <dbl>   <dbl> <fct>   <dbl> <lgl>     <dbl>
+    ##  1     1 female     34      51  3629   177      35 white    39.9 FALSE        13
+    ##  2     2 male       34      48  3062   156      65 black    25.9 FALSE        14
+    ##  3     3 female     36      50  3345   148      85 white    39.9 FALSE        12
+    ##  4     4 male       34      52  3062   157      55 white    40   FALSE        14
+    ##  5     5 female     34      52  3374   156       5 white    41.6 FALSE        13
+    ##  6     6 male       33      52  3374   129      55 white    40.7 FALSE        12
+    ##  7     7 female     33      46  2523   126      96 black    40.3 FALSE        14
+    ##  8     8 female     33      49  2778   140       5 white    37.4 FALSE        12
+    ##  9     9 male       36      52  3515   146      85 white    40.3 FALSE        11
+    ## 10    10 male       33      50  3459   169      75 black    40.7 FALSE        12
+    ## # … with 4,332 more rows, 10 more variables: mheight <dbl>, momage <dbl>,
+    ## #   mrace <fct>, parity <dbl>, pnumlbw <dbl>, pnumsga <dbl>, ppbmi <dbl>,
+    ## #   ppwt <dbl>, smoken <dbl>, wtgain <dbl>, and abbreviated variable name
+    ## #   ¹​menarche
+    ## # ℹ Use `print(n = ...)` to see more rows, and `colnames()` to see all variable names
+
+Splitting data into training and test sets.
+
+``` r
+bwt_df_train =
+  sample_n(bwt_df, 869)
+
+
+
+bwt_df_test = 
+  anti_join(bwt_df, bwt_df_train, by = "id")
+
+bwt_df_test =
+ bwt_df_test  %>%
+  select(-id)
+
+
+bwt_df_train =
+  bwt_df_train %>%
+    select(-id)
+
+bwt_df_train
+```
+
+    ## # A tibble: 869 × 20
+    ##    babysex bhead blength   bwt delwt fincome frace gaweeks malform menarche
+    ##    <fct>   <dbl>   <dbl> <dbl> <dbl>   <dbl> <fct>   <dbl> <lgl>      <dbl>
+    ##  1 male       35      49  3062   214      25 black    35.7 FALSE         13
+    ##  2 female     36      51  3430   133      85 white    41.1 FALSE         14
+    ##  3 male       37      54  3770   215      35 white    46.4 FALSE         16
+    ##  4 male       34      54  3856   181      35 black    39.1 FALSE         12
+    ##  5 female     33      48  2750   135      15 black    40   FALSE         12
+    ##  6 female     35      50  3629   150      35 black    42.1 FALSE         14
+    ##  7 female     35      53  4054   146      95 white    42.3 FALSE         15
+    ##  8 male       34      52  3033   181      35 black    40.1 FALSE         14
+    ##  9 male       34      52  3629   164      45 black    38.7 FALSE         14
+    ## 10 female     33      50  2608   127      15 black    41.7 FALSE         11
+    ## # … with 859 more rows, and 10 more variables: mheight <dbl>, momage <dbl>,
+    ## #   mrace <fct>, parity <dbl>, pnumlbw <dbl>, pnumsga <dbl>, ppbmi <dbl>,
+    ## #   ppwt <dbl>, smoken <dbl>, wtgain <dbl>
+    ## # ℹ Use `print(n = ...)` to see more rows, and `colnames()` to see all variable names
+
+``` r
+bwt_df_test
+```
+
+    ## # A tibble: 3,473 × 20
+    ##    babysex bhead blength   bwt delwt fincome frace gaweeks malform menarche
+    ##    <fct>   <dbl>   <dbl> <dbl> <dbl>   <dbl> <fct>   <dbl> <lgl>      <dbl>
+    ##  1 male       34      48  3062   156      65 black    25.9 FALSE         14
+    ##  2 female     36      50  3345   148      85 white    39.9 FALSE         12
+    ##  3 male       34      52  3062   157      55 white    40   FALSE         14
+    ##  4 female     34      52  3374   156       5 white    41.6 FALSE         13
+    ##  5 female     33      46  2523   126      96 black    40.3 FALSE         14
+    ##  6 female     33      49  2778   140       5 white    37.4 FALSE         12
+    ##  7 male       33      50  3459   169      75 black    40.7 FALSE         12
+    ##  8 female     35      51  3317   130      55 white    43.4 FALSE         13
+    ##  9 male       35      51  3459   146      55 white    39.4 FALSE         12
+    ## 10 female     35      48  3175   158      75 white    39.7 FALSE         13
+    ## # … with 3,463 more rows, and 10 more variables: mheight <dbl>, momage <dbl>,
+    ## #   mrace <fct>, parity <dbl>, pnumlbw <dbl>, pnumsga <dbl>, ppbmi <dbl>,
+    ## #   ppwt <dbl>, smoken <dbl>, wtgain <dbl>
+    ## # ℹ Use `print(n = ...)` to see more rows, and `colnames()` to see all variable names
+
+``` r
+y = bwt_df_train$bwt %>% as.tibble()
+```
+
+    ## Warning: `as.tibble()` was deprecated in tibble 2.0.0.
+    ## Please use `as_tibble()` instead.
+    ## The signature and semantics have changed, see `?as_tibble`.
+    ## This warning is displayed once every 8 hours.
+    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was generated.
+
+``` r
+x1 = model.matrix(bwt ~ ., bwt_df_train)[,-1] %>% as.tibble()
+
+y_test = bwt_df_test$bwt
+x1_test = model.matrix(bwt ~ ., bwt_df_test)[,-1]
+
+rpart.model_pure = 
+  rpart(bwt  ~ .,
+                    data = bwt_df_train, method = "anova")
+ 
+rpart.plot(rpart.model_pure)
+```
+
+![](birthwt_pca_exp_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+
+``` r
+predicted_dec =
+ predict(rpart.model_pure, bwt_df_test, type = 'vector') %>%
+  as.tibble
+
+residual_dec =
+  predicted_dec - y_test %>%
+  as.tibble() 
+
+pred_dec =
+  predicted_dec%>%
+   rename(prediction = value)
+
+res_dec =
+  residual_dec%>%
+   rename(residual = value)
+
+fittedvalues_dec =
+  bwt_df_test$bwt %>%
+  as.tibble
+
+
+plot_df_dec =
+  cbind(fittedvalues_dec, pred_dec, res_dec) %>%
+  as.tibble()
+
+plot_df_dec
+```
+
+    ## # A tibble: 3,473 × 3
+    ##    value prediction residual
+    ##    <dbl>      <dbl>    <dbl>
+    ##  1  3062      3108.     46.1
+    ##  2  3345      3411.     66.1
+    ##  3  3062      3183.    121. 
+    ##  4  3374      3183.   -191. 
+    ##  5  2523      2574.     50.6
+    ##  6  2778      2792.     14.2
+    ##  7  3459      3183.   -276. 
+    ##  8  3317      3624.    307. 
+    ##  9  3459      3411.    -47.9
+    ## 10  3175      3108.    -66.9
+    ## # … with 3,463 more rows
+    ## # ℹ Use `print(n = ...)` to see more rows
+
+``` r
+rmse_dec = 
+  sqrt(mean((plot_df_dec$residual)^2))
+
+rmse_dec
+```
+
+    ## [1] 324.611
+
+### Random forest models
+
+``` r
+rf.fit <- randomForest(bwt ~ ., data=bwt_df_train, ntree=1000,
+                       keep.forest=FALSE, importance=TRUE)
+```
+
+``` r
+ImpData <- as.data.frame(importance(rf.fit))
+ImpData$Var.Names <- row.names(ImpData)
+
+ggplot(ImpData, aes(x=Var.Names, y=`%IncMSE`)) +
+  geom_segment( aes(x=Var.Names, xend=Var.Names, y=0, yend=`%IncMSE`), color="skyblue") +
+  geom_point(aes(size = IncNodePurity), color="blue", alpha=0.6) +
+  theme_light() +
+  coord_flip() +
+  theme(
+    legend.position="bottom",
+    panel.grid.major.y = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+```
+
+![](birthwt_pca_exp_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
